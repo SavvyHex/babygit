@@ -55,3 +55,29 @@ typedef struct {
     FileStatus* staged_files;
     int staged_count;
 } Repository;
+
+// Function to create a Repository
+Repository* init_repository(){
+  mkdir(".babygit", 0755);
+  mkdir(".babygit/objects", 0755);
+  mkdir(".babygit/refs", 0755);
+  mkdir(".babygit/refs/heads", 0755);
+  mkdir(".babygit/refs/remotes", 0755);
+
+  FILE* head = fopen(".babygit/HEAD", "w");
+  fprintf(head, "ref: refs/heads/master\n");
+  fclose("head");
+
+  Repository* repo = malloc(sizeof(Repository));
+  repo->branches = NULL;
+  repo->commits = NULL;
+  repo->stashes = NULL;
+  repo->staged_files = NULL;
+  repo->staged_count = 0;
+
+  Branch* master = create_branch(repo, "master");
+  repo->current_branch = master;
+
+  printf("Initialized babygit repository\n");
+  return repo;
+}
