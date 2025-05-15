@@ -27,3 +27,31 @@ typedef struct Branch{
   struct Brach* children;
   struct Brach* next;
 } Branch;
+
+// File status
+// 0 = unmodified
+// 1 = modified
+// 2 = added
+// 3 = deleted
+typedef struct {
+  char filename[256];
+  char has[41];
+  int status;
+};
+
+// Stash item
+typedef struct Stash {
+  char message[256];
+  Commit* commit;
+  struct Stash* next;
+} Stash;
+
+// Repository state
+typedef struct {
+    Branch* branches;
+    Branch* current_branch;
+    Commit* commits;
+    Stash* stashes;
+    FileStatus* staged_files;
+    int staged_count;
+} Repository;
