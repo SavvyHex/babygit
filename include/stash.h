@@ -3,12 +3,7 @@
 
 #include "commit.h"
 #include "repository.h"
-
-typedef struct Stash {
-    char message[256];
-    Commit* commit;
-    struct Stash* next;
-} Stash;
+#include "object_types.h"
 
 void stash_changes(Repository* repo, const char* message);
 void apply_stash(Repository* repo, int stash_index);

@@ -1,8 +1,9 @@
-#include "../include/repository.h"
-#include "../include/utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+
+#include "repository.h"
+#include "utils.h"
 
 Repository *init_repository() {
   // Create directory structure

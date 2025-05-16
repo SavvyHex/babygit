@@ -1,7 +1,8 @@
-#include "../include/utils.h"
 #include <openssl/sha.h>
 #include <stdio.h>
 #include <sys/stat.h>
+
+#include "utils.h"
 
 void calculate_hash(const char *content, size_t len, char *output) {
   unsigned char hash[SHA_DIGEST_LENGTH];

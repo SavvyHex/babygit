@@ -1,9 +1,10 @@
-#include "../include/commit.h"
-#include "../include/utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#include "commit.h"
+#include "utils.h"
 
 Commit *create_commit(Repository *repo, const char *message,
                       const char *author) {

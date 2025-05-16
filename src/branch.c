@@ -1,8 +1,10 @@
-#include "../include/branch.h"
-#include "../include/utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "branch.h"
+#include "utils.h"
+#include "repository.h"
 
 Branch *create_branch(Repository *repo, const char *branch_name) {
   if (!repo || !branch_name)

@@ -1,13 +1,7 @@
 #ifndef STAGING_H
 #define STAGING_H
 
-#include "repository.h"
-
-typedef struct {
-    char filename[256];
-    char hash[41];
-    int status;
-} FileStatus;
+#include "object_types.h"
 
 void add_to_index(Repository* repo, const char* filepath);
 void clear_staging_area(Repository* repo);

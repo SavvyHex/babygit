@@ -1,16 +1,7 @@
 #ifndef BRANCH_H
 #define BRANCH_H
 
-#include "commit.h"
-#include "repository.h"
-
-typedef struct Branch {
-    char name[256];
-    Commit* head;
-    struct Branch* parent;
-    struct Branch* children;
-    struct Branch* next;
-} Branch;
+#include "object_types.h"
 
 Branch* create_branch(Repository* repo, const char* branch_name);
 Branch* find_branch(Repository* repo, const char* branch_name);
