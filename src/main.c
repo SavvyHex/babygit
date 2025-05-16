@@ -16,18 +16,6 @@ typedef enum {
   OBJ_COMMIT
 } ObjectType;
 
-// Commit represented as a node of a Linked List
-typedef struct Commit{
-  char hash[41];
-  char parent_hash[41];
-  char second_parent[41];
-  char author[256];
-  char message[256];
-  time_t timestamp;
-  struct Commit* parent;
-  struct Commit* next;
-} Commit;
-
 // Branch represented as a tree node
 typedef struct Branch{
   char name[256];

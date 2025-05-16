@@ -6,14 +6,14 @@
 
 Repository* init_repository() {
     // Create directory structure
-    ensure_directory_exists(".mygit");
-    ensure_directory_exists(".mygit/objects");
-    ensure_directory_exists(".mygit/refs");
-    ensure_directory_exists(".mygit/refs/heads");
-    ensure_directory_exists(".mygit/refs/remotes");
+    ensure_directory_exists(".babygit");
+    ensure_directory_exists(".babygit/objects");
+    ensure_directory_exists(".babygit/refs");
+    ensure_directory_exists(".babygit/refs/heads");
+    ensure_directory_exists(".babygit/refs/remotes");
     
     // Create HEAD file
-    FILE* head = fopen(".mygit/HEAD", "w");
+    FILE* head = fopen(".babygit/HEAD", "w");
     if (!head) {
         perror("Failed to create HEAD file");
         return NULL;
@@ -31,12 +31,12 @@ Repository* init_repository() {
     repo->staged_files = NULL;
     repo->staged_count = 0;
     
-    printf("Initialized empty MyGit repository\n");
+    printf("Initialized empty babygit repository\n");
     return repo;
 }
 
 Repository* load_repository() {
-    if (!file_exists(".mygit/HEAD")) {
+    if (!file_exists(".babygit/HEAD")) {
         return NULL;
     }
     
