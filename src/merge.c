@@ -25,7 +25,7 @@ void merge_branch(Repository *repo, const char *branch_name) {
   // TODO: Implement actual merge logic
 }
 
-void resolve_merge_conflict(Repository *repo, const char *filepath) {
-  printf("Resolving conflict in %s\n", filepath);
-  // TODO: Implement conflict resolution
-}
+// void resolve_merge_conflict(Repository *repo, const char *filepath) {
+//   printf("Resolving conflict in %s\n", filepath);
+//   // TODO: Implement conflict resolution
+// }
