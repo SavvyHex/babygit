@@ -7,6 +7,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "repository.h"
+
 // Basic object types
 typedef enum {
   OBJ_BLOB,
@@ -52,16 +54,6 @@ typedef struct Stash {
   Commit* commit;
   struct Stash* next;
 } Stash;
-
-// Repository state
-typedef struct {
-    Branch* branches;
-    Branch* current_branch;
-    Commit* commits;
-    Stash* stashes;
-    FileStatus* staged_files;
-    int staged_count;
-} Repository;
 
 // Simplified Hashing
 void calculate_hash(const char* content, size_t len, char* output){
@@ -116,28 +108,3 @@ Branch* create_branch(Repository* repo, const char* branch_name){
   return branch;
 }
 
-// Function to create a Repository
-Repository* init_repository(){
-  mkdir(".babygit", 0755);
-  mkdir(".babygit/objects", 0755);
-  mkdir(".babygit/refs", 0755);
-  mkdir(".babygit/refs/heads", 0755);
-  mkdir(".babygit/refs/remotes", 0755);
-
-  FILE* head = fopen(".babygit/HEAD", "w");
-  fprintf(head, "ref: refs/heads/master\n");
-  fclose("head");
-
-  Repository* repo = malloc(sizeof(Repository));
-  repo->branches = NULL;
-  repo->commits = NULL;
-  repo->stashes = NULL;
-  repo->staged_files = NULL;
-  repo->staged_count = 0;
-
-  Branch* master = create_branch(repo, "master");
-  repo->current_branch = master;
-
-  printf("Initialized babygit repository\n");
-  return repo;
-}
