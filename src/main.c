@@ -6,6 +6,7 @@
 #include "branch.h"
 #include "staging.h"
 #include "stash.h"
+#include "merge.h"
 
 // Basic object types
 typedef enum {
