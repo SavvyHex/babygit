@@ -1,6 +1,8 @@
 #ifndef STAGING_H
 #define STAGING_H
 
+#include "repository.h"
+
 typedef struct {
     char filename[256];
     char hash[41];

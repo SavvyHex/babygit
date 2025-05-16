@@ -2,6 +2,7 @@
 #define STASH_H
 
 #include "commit.h"
+#include "repository.h"
 
 typedef struct Stash {
     char message[256];

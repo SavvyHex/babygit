@@ -2,6 +2,7 @@
 #define BRANCH_H
 
 #include "commit.h"
+#include "repository.h"
 
 typedef struct Branch {
     char name[256];

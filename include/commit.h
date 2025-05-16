@@ -2,6 +2,7 @@
 #define COMMIT_H
 
 #include <time.h>
+#include "repository.h"
 
 typedef struct Commit {
     char hash[41];
