@@ -8,6 +8,8 @@
 #include <unistd.h>
 
 #include "repository.h"
+#include "commit.h"
+#include "branch.h"
 
 // Basic object types
 typedef enum {
