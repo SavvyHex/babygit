@@ -7,6 +7,13 @@
 #include <time.h>
 #include <unistd.h>
 
+// Basic object types
+typedef enum {
+  OBJ_BLOB,
+  OBJ_TREE,
+  OBJ_COMMIT
+} ObjectType;
+
 // Commit represented as a node of a Linked List
 typedef struct Commit{
   char hash[41];
@@ -56,6 +63,15 @@ typedef struct {
     int staged_count;
 } Repository;
 
+// Simplified Hashing
+void calculate_hash(const char* content, size_t len, char* output){
+  unsigned char hash[SHA_DIGEST_LENGTH];
+  SHA1((unsigned char*)content, len, hash);
+
+  for (int i = 0; i < SHA_DIGEST_LENGTH; i++) {
+    sprintf(output + (i * 2), "%02", hash[i]);
+  }
+}
 // Function to create a branch
 Branch* create_branch(Repository* repo, const char* branch_name){
   Branch* branch = malloc(sizeof(Branch));
