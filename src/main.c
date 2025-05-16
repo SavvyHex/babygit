@@ -55,16 +55,6 @@ typedef struct Stash {
   struct Stash* next;
 } Stash;
 
-// Simplified Hashing
-void calculate_hash(const char* content, size_t len, char* output){
-  unsigned char hash[SHA_DIGEST_LENGTH];
-  SHA1((unsigned char*)content, len, hash);
-
-  for (int i = 0; i < SHA_DIGEST_LENGTH; i++) {
-    sprintf(output + (i * 2), "%02", hash[i]);
-  }
-  output[40] = "\0";
-}
 // Function to create a branch
 Branch* create_branch(Repository* repo, const char* branch_name){
   Branch* branch = malloc(sizeof(Branch));
