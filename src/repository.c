@@ -1,9 +1,11 @@
+#include "repository.h"
+#include "utils.h"
+#include "commit.h"
+#include "branch.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-
-#include "repository.h"
-#include "utils.h"
 
 Repository *init_repository() {
   // Create directory structure

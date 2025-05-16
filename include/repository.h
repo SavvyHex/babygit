@@ -1,6 +1,7 @@
 #ifndef REPOSITORY_H
 #define REPOSITORY_H
 
+#include "branch.h"
 #include "object_types.h"
 
 // Repository functions

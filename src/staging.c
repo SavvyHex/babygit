@@ -1,10 +1,10 @@
+#include "staging.h"
+#include "utils.h"
+
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "staging.h"
-#include "utils.h"
 
 void add_to_index(Repository *repo, const char *filepath) {
   if (!repo || !filepath)

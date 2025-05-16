@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra -Iinclude -g
 LDFLAGS = -lcrypto
 SOURCES = $(wildcard src/*.c)
 OBJECTS = $(SOURCES:.c=.o)
-EXECUTABLE = babygit
+EXECUTABLE = bin/babygit
 
 all: $(EXECUTABLE)
 

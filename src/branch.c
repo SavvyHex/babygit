@@ -1,10 +1,10 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "branch.h"
 #include "utils.h"
 #include "repository.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 Branch *create_branch(Repository *repo, const char *branch_name) {
   if (!repo || !branch_name)
@@ -105,15 +105,25 @@ void checkout_branch(Repository *repo, const char *branch_name) {
   printf("Switched to branch %s\n", branch_name);
 }
 
-void free_branch(Branch *branch) {
-  if (!branch)
-    return;
+void free_branch(Branch* branch) {
+    if (!branch) return;
 
-  // Free children recursively
-  free_branch(branch->children);
+    // Free all children recursively (depth-first)
+    Branch* child = branch->children;
+    while (child) {
+        Branch* next_child = child->next;
+        free_branch(child);
+        child = next_child;
+    }
 
-  // Free siblings
-  free_branch(branch->next);
+    // Free all siblings (linked list)
+    Branch* sibling = branch->next;
+    while (sibling) {
+        Branch* next_sibling = sibling->next;
+        free_branch(sibling);
+        sibling = next_sibling;
+    }
 
-  free(branch);
+    // Free the branch itself
+    free(branch);
 }

@@ -1,9 +1,9 @@
+#include "stash.h"
+#include "commit.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "stash.h"
-#include "commit.h"
 
 void stash_changes(Repository *repo, const char *message) {
   if (!repo || !message)
