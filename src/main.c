@@ -71,6 +71,7 @@ void calculate_hash(const char* content, size_t len, char* output){
   for (int i = 0; i < SHA_DIGEST_LENGTH; i++) {
     sprintf(output + (i * 2), "%02", hash[i]);
   }
+  output[40] = "\0";
 }
 // Function to create a branch
 Branch* create_branch(Repository* repo, const char* branch_name){
