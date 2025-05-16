@@ -56,6 +56,49 @@ typedef struct {
     int staged_count;
 } Repository;
 
+// Function to create a branch
+Branch* create_branch(Repository* repo, const char* branch_name){
+  Branch* branch = malloc(sizeof(Branch));
+  strncpy(branch->name, branch_name, 255);
+  branch->head = repo->current_branch? repo->current_branch->head : NULL;
+  branch->parent = repo->current_branch;
+  branch->children = NULL;
+  branch->next = NULL;
+
+  if(!repo->branches){
+    repo->branches = branch;
+  } else {
+    if (repo->current_branch) {
+      if (!repo->current_branch->children) {
+        repo->current_branch->children = branch;
+      } else {
+        Branch* last = repo->current_branch->children;
+        while (last->next) {
+          last = last->next;
+        }
+        last->next = branch;
+      }
+    } else {
+      Branch* last = repo->branches;
+      while (last->next) {
+        last = last->next;
+      }
+      last->next = branch;
+    }
+  }
+
+  char branch_path[256];
+  sprintf(branch_path, ".babygit/refs/head/%s\n", branch_name);
+  FILE* branch_file = fopen(branch_path, "w");
+  if (branch->head) {
+    fprintf(branch_file, "%s\n", branch->head->hash);
+  }
+  fclose(branch_file);
+  
+  printf("Created branch : %s\n", branch_name);
+  return branch;
+}
+
 // Function to create a Repository
 Repository* init_repository(){
   mkdir(".babygit", 0755);
