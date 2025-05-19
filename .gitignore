@@ -35,6 +35,7 @@
 *.i*86
 *.x86_64
 *.hex
+babygit
 
 # Debug files
 *.dSYM/
@@ -51,6 +52,4 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-# Executable folder
-bin/
 test/
