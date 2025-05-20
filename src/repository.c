@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <dirent.h>
 #include <sys/stat.h>
 
 Repository *init_repository() {
@@ -39,25 +40,6 @@ Repository *init_repository() {
   return repo;
 }
 
-Repository *load_repository() {
-  if (!file_exists(".babygit/HEAD")) {
-    return NULL;
-  }
-
-  Repository *repo = malloc(sizeof(Repository));
-  if (!repo)
-    return NULL;
-
-  // TODO: Implement actual loading from disk
-  repo->branches = NULL;
-  repo->current_branch = NULL;
-  repo->commits = NULL;
-  repo->staged_files = NULL;
-  repo->staged_count = 0;
-
-  return repo;
-}
-
 void save_repository(Repository *repo) {
   if (!repo)
     return;
@@ -85,4 +67,36 @@ void free_repository(Repository *repo) {
   }
 
   free(repo);
+}
+
+void load_branches(Repository* repo) {
+    DIR* dir;
+    struct dirent* entry;
+    char path[256];
+    
+    snprintf(path, sizeof(path), ".mygit/refs/heads");
+    dir = opendir(path);
+    if (!dir) return;
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_REG) {
+            // Create branch entry for each file in refs/heads
+            create_branch(repo, entry->d_name);
+        }
+    }
+    closedir(dir);
+}
+
+Repository* load_repository() {
+    if (!file_exists(".mygit/HEAD")) return NULL;
+
+    Repository* repo = malloc(sizeof(Repository));
+    repo->branches = NULL;
+    repo->current_branch = NULL;
+    repo->commits = NULL;
+    repo->staged_files = NULL;
+    repo->staged_count = 0;
+
+    load_branches(repo);
+    return repo;
 }
