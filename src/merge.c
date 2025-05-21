@@ -10,6 +10,12 @@ void merge_branch(Repository *repo, const char *branch_name) {
 
     Branch *target = find_branch(repo, branch_name);
     Branch *current = repo->current_branch;
+
+    printf("DEBUG: current branch = %s\n", repo->current_branch ? repo->current_branch->name : "NULL");
+    printf("DEBUG: current head = %s\n", repo->current_branch && repo->current_branch->head ? repo->current_branch->head->hash : "NULL");
+    printf("DEBUG: merging branch = %s\n", to_merge->name);
+    printf("DEBUG: target head = %s\n", to_merge->head ? to_merge->head->hash : "NULL");
+
     if (!target || !target->head || !current || !current->head) {
         printf("Cannot merge: invalid branch state\n");
         return;

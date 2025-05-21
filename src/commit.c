@@ -79,11 +79,13 @@ Commit *create_commit(Repository *repo, const char *message, const char *author)
         repo->current_branch->head = commit;
     }
 
-    for (int i = 0; i < repo->branch_count; i++) {
-        if (strcmp(repo->branches[i].name, repo->current_branch->name) == 0) {
-            repo->branches[i].head = commit;
-            break;
+    Branch *current = repo->branches;
+    while (current) {
+        if (strcmp(current->name, repo->current_branch->name) == 0) {
+            current->head = commit;
+            break;  // branch found and updated, can exit loop
         }
+        current = current->next;
     }
 
     // Add to repo->commits list

@@ -60,12 +60,13 @@ Branch* create_branch(Repository* repo, const char* name) {
 Branch* find_branch(Repository* repo, const char* branch_name) {
     if (!repo || !branch_name) return NULL;
 
-    for (int i = 0; i < repo->branch_count; i++) {
-        if (strcmp(repo->branches[i].name, branch_name) == 0) {
-            return &repo->branches[i];  // Return a pointer, not a copy
+    Branch* current = repo->branches;
+    while (current) {
+        if (strcmp(current->name, branch_name) == 0) {
+            return current;
         }
+        current = current->next;
     }
-
     return NULL;
 }
 
