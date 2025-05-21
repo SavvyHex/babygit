@@ -25,6 +25,31 @@ void merge_branch(Repository *repo, const char *branch_name) {
     printf("DEBUG: merging branch = %s\n", target->name);
     printf("DEBUG: target head = %s\n", target->head ? target->head->hash : "NULL");
 
+    // More detailed debug before invalid branch state check
+    printf("DEBUG: Checking branch heads and pointers:\n");
+    if (!current) {
+        printf("  Current branch pointer is NULL\n");
+    } else {
+        printf("  Current branch name: %s\n", current->name);
+        if (!current->head) {
+            printf("  Current branch HEAD is NULL\n");
+        } else {
+            printf("  Current branch HEAD hash: %s\n", current->head->hash);
+        }
+    }
+
+    if (!target) {
+        printf("  Target branch pointer is NULL\n");
+    } else {
+        printf("  Target branch name: %s\n", target->name);
+        if (!target->head) {
+            printf("  Target branch HEAD is NULL\n");
+        } else {
+            printf("  Target branch HEAD hash: %s\n", target->head->hash);
+            printf("  Target branch HEAD parent_hash: %s\n", target->head->parent_hash);
+        }
+    }
+
     if (!target->head || !current || !current->head) {
         printf("Cannot merge: invalid branch state\n");
         return;
@@ -119,6 +144,7 @@ void merge_branch(Repository *repo, const char *branch_name) {
     fclose(file);
 
     // Update repo state
+    merge_commit->next = repo->commits;
     repo->commits = merge_commit;
     current->head = merge_commit;
 
