@@ -94,14 +94,6 @@ void update_file_status(Repository *repo) {
 }
 
 void print_status(Repository *repo) {
-    if (!repo->current_branch) {
-      // Initialize main branch if missing
-      if (!find_branch(repo, "main")) {
-          create_branch(repo, "main");
-      }
-      checkout_branch(repo, "main");
-  }
-
   if (!repo)
     return;
 
