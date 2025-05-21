@@ -18,51 +18,45 @@ void ensure_main_branch(Repository* repo) {
 }
 
 Repository *init_repository() {
-  // Create directory structure
-  ensure_directory_exists(".babygit");
-  ensure_directory_exists(".babygit/objects");
-  ensure_directory_exists(".babygit/refs");
-  ensure_directory_exists(".babygit/refs/heads");
-  ensure_directory_exists(".babygit/refs/remotes");
+    ensure_directory_exists(".babygit");
+    ensure_directory_exists(".babygit/objects");
+    ensure_directory_exists(".babygit/refs");
+    ensure_directory_exists(".babygit/refs/heads");
+    ensure_directory_exists(".babygit/refs/remotes");
 
-  // Create HEAD file
-  FILE *head = fopen(".babygit/HEAD", "w");
-  if (!head) {
-    perror("Failed to create HEAD file");
-    return NULL;
-  }
-  fprintf(head, "ref: refs/heads/master\n");
-  fclose(head);
+    FILE *head = fopen(".babygit/HEAD", "w");
+    if (!head) {
+        perror("Failed to create HEAD file");
+        return NULL;
+    }
+    fprintf(head, "ref: refs/heads/master\n");
+    fclose(head);
 
-  // Initialize repository structure
-  Repository *repo = malloc(sizeof(Repository));
-  if (!repo)
-    return NULL;
+    Repository *repo = malloc(sizeof(Repository));
+    if (!repo)
+        return NULL;
 
-  repo->branches = NULL;
-  repo->current_branch = NULL;
-  repo->commits = NULL;
-  repo->staged_files = NULL;
-  repo->staged_count = 0;
+    repo->branches = NULL;
+    repo->current_branch = NULL;
+    repo->commits = NULL;
+    repo->staged_files = NULL;
+    repo->staged_count = 0;
 
-  // Create initial 'main' branch
-  create_branch(repo, "main");
-  checkout_branch(repo, "main");
+    create_branch(repo, "main");
+    checkout_branch(repo, "main");
 
-  printf("Initialized empty babygit repository\n");
-  return repo;
+    printf("Initialized empty babygit repository\n");
+    return repo;
 }
 
 void save_repository(Repository* repo) {
     if (!repo) return;
 
-    // Ensure .babygit directory structure exists
     mkdir(".babygit", 0755);
     mkdir(".babygit/objects", 0755);
     mkdir(".babygit/refs", 0755);
     mkdir(".babygit/refs/heads", 0755);
 
-    // Save HEAD
     FILE* head_file = fopen(".babygit/HEAD", "w");
     if (head_file) {
         if (repo->current_branch) {
@@ -73,17 +67,17 @@ void save_repository(Repository* repo) {
         fclose(head_file);
     }
 
-    // Save branches
     Branch* branch = repo->branches;
     while (branch) {
         char branch_path[256];
         int written = snprintf(branch_path, sizeof(branch_path),
-                           ".babygit/refs/heads/%s", branch->name);
-        if (written < 0 || (size_t)written >= sizeof(branch_path)){
+                               ".babygit/refs/heads/%s", branch->name);
+        if (written < 0 || (size_t)written >= sizeof(branch_path)) {
             fprintf(stderr, "Branch path too long for branch: %s\n", branch->name);
-            continue; // or return NULL if you're in load_repository
+            branch = branch->next;
+            continue;
         }
-        
+
         FILE* branch_file = fopen(branch_path, "w");
         if (branch_file) {
             if (branch->head) {
@@ -94,7 +88,6 @@ void save_repository(Repository* repo) {
         branch = branch->next;
     }
 
-    // Save staged files (simplified example)
     FILE* index_file = fopen(".babygit/index", "w");
     if (index_file) {
         for (int i = 0; i < repo->staged_count; i++) {
@@ -107,40 +100,35 @@ void save_repository(Repository* repo) {
 }
 
 void free_repository(Repository *repo) {
-  if (!repo)
-    return;
+    if (!repo) return;
 
-  // Free branches (recursive)
-  free_branch(repo->branches);
+    free_branch(repo->branches);
 
-  // Free commits
-  Commit *current = repo->commits;
-  while (current) {
-    Commit *next = current->next;
-    free(current);
-    current = next;
-  }
+    Commit *current = repo->commits;
+    while (current) {
+        Commit *next = current->next;
+        free(current);
+        current = next;
+    }
 
-  // Free staged files
-  if (repo->staged_files) {
-    free(repo->staged_files);
-  }
+    if (repo->staged_files) {
+        free(repo->staged_files);
+    }
 
-  free(repo);
+    free(repo);
 }
 
 void load_branches(Repository* repo) {
     DIR* dir;
     struct dirent* entry;
     char path[256];
-    
+
     snprintf(path, sizeof(path), ".babygit/refs/heads");
     dir = opendir(path);
     if (!dir) return;
 
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_type == DT_REG) {
-            // Create branch entry for each file in refs/heads
             create_branch(repo, entry->d_name);
         }
     }
@@ -148,7 +136,6 @@ void load_branches(Repository* repo) {
 }
 
 Repository* load_repository() {
-    // Check .babygit exists first
     if (access(".babygit", F_OK) != 0) return NULL;
 
     Repository* repo = malloc(sizeof(Repository));
@@ -157,21 +144,20 @@ Repository* load_repository() {
     repo->commits = NULL;
     repo->staged_files = NULL;
     repo->staged_count = 0;
-    
+
     // Load existing branches
     DIR* dir = opendir(".babygit/refs/heads");
     if (dir) {
         struct dirent* entry;
         while ((entry = readdir(dir)) != NULL) {
-            if (strcmp(entry->d_name, ".") == 0 || 
-                strcmp(entry->d_name, "..") == 0) continue;
-                
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+                continue;
             create_branch(repo, entry->d_name);
         }
         closedir(dir);
     }
 
-    // Load HEAD
+    // Load HEAD and set current branch
     FILE* head_file = fopen(".babygit/HEAD", "r");
     if (head_file) {
         char branch_name[256];
@@ -181,10 +167,17 @@ Repository* load_repository() {
         fclose(head_file);
     }
 
+    // Now load commit for current branch
+    Branch* branch = repo->current_branch;
+    if (!branch) {
+        fprintf(stderr, "Current branch not set. HEAD might be corrupt.\n");
+        return NULL;
+    }
+
     char branch_path[256];
     int written = snprintf(branch_path, sizeof(branch_path),
                            ".babygit/refs/heads/%s", branch->name);
-    if (written < 0 || written >= sizeof(branch_path)) {
+    if (written < 0 || (size_t)written >= sizeof(branch_path)) {
         fprintf(stderr, "Branch path too long for branch: %s\n", branch->name);
         return NULL;
     }
@@ -200,6 +193,6 @@ Repository* load_repository() {
         }
         fclose(branch_file);
     }
-    
+
     return repo;
 }
