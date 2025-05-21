@@ -7,12 +7,21 @@
 #include <time.h>
 
 Commit *create_commit(Repository *repo, const char *message, const char *author) {
-    if (!repo || !message || !author || repo->staged_count == 0)
+    if (!repo || !message || !author) {
+        printf("create_commit: Invalid parameters\n");
         return NULL;
+    }
+
+    if (repo->staged_count == 0) {
+        printf("create_commit: No staged files to commit\n");
+        return NULL;
+    }
 
     Commit *commit = malloc(sizeof(Commit));
-    if (!commit)
+    if (!commit) {
+        printf("create_commit: malloc failed\n");
         return NULL;
+    }
 
     // Metadata
     strncpy(commit->author, author, sizeof(commit->author) - 1);
@@ -37,6 +46,7 @@ Commit *create_commit(Repository *repo, const char *message, const char *author)
         strcat(files_buf, "\n");
     }
 
+    char commit_content[4096];
     snprintf(commit_content, sizeof(commit_content),
          "parent %s\nauthor %s\ntime %ld\nmessage %s\n%s",
          commit->parent_hash, commit->author, commit->timestamp,
@@ -50,11 +60,19 @@ Commit *create_commit(Repository *repo, const char *message, const char *author)
     snprintf(commit_path, sizeof(commit_path), ".babygit/objects/%s", commit->hash);
     FILE *commit_file = fopen(commit_path, "w");
     if (!commit_file) {
+        printf("create_commit: Failed to open commit file %s for writing\n", commit_path);
         free(commit);
         return NULL;
     }
-    fprintf(commit_file, "%s", commit_content);
+
+    int written = fprintf(commit_file, "%s", commit_content);
     fclose(commit_file);
+
+    if (written < 0) {
+        printf("create_commit: Failed to write commit content\n");
+        free(commit);
+        return NULL;
+    }
 
     // Update current branch
     if (repo->current_branch) {
