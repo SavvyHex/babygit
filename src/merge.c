@@ -1,9 +1,12 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "merge.h"
 #include "branch.h"
 #include "commit.h"
+#include "utils.h"  // for calculate_hash()
 
 void merge_branch(Repository *repo, const char *branch_name) {
     if (!repo || !branch_name) return;
@@ -11,12 +14,18 @@ void merge_branch(Repository *repo, const char *branch_name) {
     Branch *target = find_branch(repo, branch_name);
     Branch *current = repo->current_branch;
 
-    printf("DEBUG: current branch = %s\n", repo->current_branch ? repo->current_branch->name : "NULL");
-    printf("DEBUG: current head = %s\n", repo->current_branch && repo->current_branch->head ? repo->current_branch->head->hash : "NULL");
-    printf("DEBUG: merging branch = %s\n", to_merge->name);
-    printf("DEBUG: target head = %s\n", to_merge->head ? to_merge->head->hash : "NULL");
+    printf("DEBUG: current branch = %s\n", current ? current->name : "NULL");
+    printf("DEBUG: current head = %s\n", current && current->head ? current->head->hash : "NULL");
 
-    if (!target || !target->head || !current || !current->head) {
+    if (!target) {
+        printf("Branch %s not found\n", branch_name);
+        return;
+    }
+
+    printf("DEBUG: merging branch = %s\n", target->name);
+    printf("DEBUG: target head = %s\n", target->head ? target->head->hash : "NULL");
+
+    if (!target->head || !current || !current->head) {
         printf("Cannot merge: invalid branch state\n");
         return;
     }
@@ -26,7 +35,7 @@ void merge_branch(Repository *repo, const char *branch_name) {
         return;
     }
 
-    // Check if already up to date
+    // Check for fast-forward merge
     if (strcmp(current->head->hash, target->head->parent_hash) == 0) {
         printf("Fast-forward merge\n");
         current->head = target->head;
@@ -35,24 +44,27 @@ void merge_branch(Repository *repo, const char *branch_name) {
 
     printf("Merging branch %s into %s\n", target->name, current->name);
 
-    // Start building merged file state
+    // Prepare merged content buffer
     char merged_content[2048] = "";
-    int conflicts = 0;
 
-    // Loop through target commit's file list
-    FILE *target_file = fopen((".babygit/objects/" + (string)target->head->hash).c_str(), "r");
+    // Build path to target commit file
+    char filepath[256];
+    snprintf(filepath, sizeof(filepath), ".babygit/objects/%s", target->head->hash);
+
+    FILE *target_file = fopen(filepath, "r");
     if (!target_file) {
         printf("Failed to read target commit.\n");
         return;
     }
 
-    // Skip to "files" section
+    // Skip lines until "files" section found
     char line[1024];
     while (fgets(line, sizeof(line), target_file)) {
         if (strncmp(line, "files", 5) == 0)
             break;
     }
 
+    // Read file entries from target commit and append to merged_content
     while (fgets(line, sizeof(line), target_file)) {
         char hash[41], filename[256];
         if (sscanf(line, "%40s %255s", hash, filename) == 2) {
@@ -64,7 +76,7 @@ void merge_branch(Repository *repo, const char *branch_name) {
     }
     fclose(target_file);
 
-    // Create merge commit manually
+    // Create new merge commit
     Commit *merge_commit = malloc(sizeof(Commit));
     if (!merge_commit) {
         printf("Out of memory.\n");
@@ -80,23 +92,23 @@ void merge_branch(Repository *repo, const char *branch_name) {
     merge_commit->parent = current->head;
     merge_commit->next = repo->commits;
 
-    // Build final commit content
+    // Compose full commit content string
     char full[4096];
     snprintf(full, sizeof(full),
              "parent %s\nparent2 %s\nauthor %s\ntime %ld\nmessage %s\nfiles\n%s",
              merge_commit->parent_hash,
              merge_commit->second_parent,
              merge_commit->author,
-             merge_commit->timestamp,
+             (long)merge_commit->timestamp,
              merge_commit->message,
              merged_content);
 
+    // Calculate hash for the new commit
     calculate_hash(full, strlen(full), merge_commit->hash);
 
-    // Save commit to disk
-    char path[256];
-    snprintf(path, sizeof(path), ".babygit/objects/%s", merge_commit->hash);
-    FILE *file = fopen(path, "w");
+    // Save the new commit object to disk
+    snprintf(filepath, sizeof(filepath), ".babygit/objects/%s", merge_commit->hash);
+    FILE *file = fopen(filepath, "w");
     if (!file) {
         free(merge_commit);
         printf("Could not save merge commit.\n");
@@ -106,6 +118,7 @@ void merge_branch(Repository *repo, const char *branch_name) {
     fprintf(file, "%s", full);
     fclose(file);
 
+    // Update repo state
     repo->commits = merge_commit;
     current->head = merge_commit;
 
