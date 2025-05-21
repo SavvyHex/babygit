@@ -33,7 +33,7 @@ Branch* create_branch(Repository* repo, const char* branch_name) {
 
     // Create branch reference file
     char branch_path[256];
-    snprintf(branch_path, sizeof(branch_path), ".mygit/refs/heads/%s", branch_name);
+    snprintf(branch_path, sizeof(branch_path), ".babygit/refs/heads/%s", branch_name);
     FILE* branch_file = fopen(branch_path, "w");
     if (branch_file) {
         if (branch->head) {
@@ -84,7 +84,7 @@ void checkout_branch(Repository* repo, const char* branch_name) {
     repo->current_branch = branch;
     
     // Update HEAD
-    FILE* head = fopen(".mygit/HEAD", "w");
+    FILE* head = fopen(".babygit/HEAD", "w");
     if (head) {
         fprintf(head, "ref: refs/heads/%s\n", branch_name);
         fclose(head);

@@ -74,7 +74,7 @@ void load_branches(Repository* repo) {
     struct dirent* entry;
     char path[256];
     
-    snprintf(path, sizeof(path), ".mygit/refs/heads");
+    snprintf(path, sizeof(path), ".babygit/refs/heads");
     dir = opendir(path);
     if (!dir) return;
 
@@ -88,7 +88,7 @@ void load_branches(Repository* repo) {
 }
 
 Repository* load_repository() {
-    if (!file_exists(".mygit/HEAD")) return NULL;
+    if (!file_exists(".babygit/HEAD")) return NULL;
 
     Repository* repo = malloc(sizeof(Repository));
     repo->branches = NULL;
