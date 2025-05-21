@@ -46,7 +46,7 @@ Repository *init_repository() {
   repo->staged_count = 0;
 
   // Create initial 'main' branch
-  Branch* main = create_branch(repo, "main");
+  create_branch(repo, "main");
   checkout_branch(repo, "main");
 
   printf("Initialized empty babygit repository\n");
@@ -77,7 +77,12 @@ void save_repository(Repository* repo) {
     Branch* branch = repo->branches;
     while (branch) {
         char branch_path[256];
-        snprintf(branch_path, sizeof(branch_path), ".babygit/refs/heads/%s", branch->name);
+        int written = snprintf(branch_path, sizeof(branch_path),
+                           ".babygit/refs/heads/%s", branch->name);
+        if (written < 0 || (size_t)written >= sizeof(branch_path)){
+            fprintf(stderr, "Branch path too long for branch: %s\n", branch->name);
+            continue; // or return NULL if you're in load_repository
+        }
         
         FILE* branch_file = fopen(branch_path, "w");
         if (branch_file) {
@@ -177,13 +182,18 @@ Repository* load_repository() {
     }
 
     char branch_path[256];
-    snprintf(branch_path, sizeof(branch_path), ".babygit/refs/heads/%s", repo->current_branch->name);
+    int written = snprintf(branch_path, sizeof(branch_path),
+                           ".babygit/refs/heads/%s", branch->name);
+    if (written < 0 || written >= sizeof(branch_path)) {
+        fprintf(stderr, "Branch path too long for branch: %s\n", branch->name);
+        return NULL;
+    }
 
     FILE* branch_file = fopen(branch_path, "r");
     if (branch_file) {
         char commit_hash[65];
         if (fscanf(branch_file, "%64s", commit_hash) == 1) {
-            Commit* head_commit = load_commit(commit_hash); // implement this if not already
+            Commit* head_commit = load_commit(commit_hash);
             if (head_commit) {
                 repo->current_branch->head = head_commit;
             }
