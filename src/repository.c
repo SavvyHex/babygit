@@ -147,7 +147,11 @@ Repository* load_repository() {
     if (access(".babygit", F_OK) != 0) return NULL;
 
     Repository* repo = malloc(sizeof(Repository));
-    // Initialize all members to NULL/0
+    repo->branches = NULL;
+    repo->current_branch = NULL;
+    repo->commits = NULL;
+    repo->staged_files = NULL;
+    repo->staged_count = 0;
     
     // Load existing branches
     DIR* dir = opendir(".babygit/refs/heads");
@@ -170,6 +174,21 @@ Repository* load_repository() {
             checkout_branch(repo, branch_name);
         }
         fclose(head_file);
+    }
+
+    char branch_path[256];
+    snprintf(branch_path, sizeof(branch_path), ".babygit/refs/heads/%s", repo->current_branch->name);
+
+    FILE* branch_file = fopen(branch_path, "r");
+    if (branch_file) {
+        char commit_hash[65];
+        if (fscanf(branch_file, "%64s", commit_hash) == 1) {
+            Commit* head_commit = load_commit(commit_hash); // implement this if not already
+            if (head_commit) {
+                repo->current_branch->head = head_commit;
+            }
+        }
+        fclose(branch_file);
     }
     
     return repo;

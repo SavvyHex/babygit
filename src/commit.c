@@ -65,4 +65,44 @@ Commit *find_commit(Repository *repo, const char *hash) {
   return NULL;
 }
 
+
+Commit* load_commit(const char* hash) {
+    char path[256];
+    snprintf(path, sizeof(path), ".babygit/objects/%s", hash);
+
+    FILE* file = fopen(path, "r");
+    if (!file) {
+        perror("Failed to open commit file");
+        return NULL;
+    }
+
+    Commit* commit = malloc(sizeof(Commit));
+    if (!commit) {
+        fclose(file);
+        return NULL;
+    }
+
+    strncpy(commit->hash, hash, sizeof(commit->hash));
+    commit->hash[sizeof(commit->hash) - 1] = '\0';
+
+    // Read message and author (assuming each is one line)
+    if (!fgets(commit->message, sizeof(commit->message), file) ||
+        !fgets(commit->author, sizeof(commit->author), file)) {
+        free(commit);
+        fclose(file);
+        return NULL;
+    }
+
+    // Remove newline characters
+    commit->message[strcspn(commit->message, "\n")] = 0;
+    commit->author[strcspn(commit->author, "\n")] = 0;
+
+    // For simplicity, we’re ignoring parent/next for now
+    commit->parent = NULL;
+    commit->next = NULL;
+
+    fclose(file);
+    return commit;
+}
+
 void free_commit(Commit *commit) { free(commit); }
