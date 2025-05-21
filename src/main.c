@@ -16,6 +16,8 @@ int main(int argc, char **argv) {
   }
 
   Repository *repo = load_repository();
+  load_index(repo);
+
   if (!repo && strcmp(argv[1], "init") != 0) {
     printf("Not a babygit repository. Run 'init' first.\n");
     return 1;
@@ -85,5 +87,6 @@ int main(int argc, char **argv) {
 
   save_repository(repo);
   free_repository(repo);
+  save_index(repo);
   return 0;
 }
