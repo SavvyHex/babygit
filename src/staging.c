@@ -94,10 +94,8 @@ void update_file_status(Repository *repo) {
 }
 
 void print_status(Repository *repo) {
-  if (!repo)
+  if (!repo || !repo->current_branch)
     return;
-
-  update_file_status(repo);
 
   printf("On branch %s\n",
          repo->current_branch ? repo->current_branch->name : "none");

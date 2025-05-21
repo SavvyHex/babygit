@@ -151,7 +151,7 @@ Repository* load_repository() {
         while ((entry = readdir(dir)) != NULL) {
             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
                 continue;
-            create_branch(repo, entry->d_name);
+            create_branch_silent(repo, entry->d_name);
         }
         closedir(dir);
     }

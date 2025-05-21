@@ -39,7 +39,13 @@ int main(int argc, char **argv) {
     if (argc < 4) {
       printf("Usage: %s commit \"message\" \"author\"\n", argv[0]);
     } else {
-      create_commit(repo, argv[2], argv[3]);
+      Commit *commit = create_commit(repo, argv[2], argv[3]);
+      if (commit) {
+        printf("Committed: %s\n", commit->hash);
+        clear_staging_area(repo);
+      } else {
+        printf("Commit failed. Nothing to commit or an error occurred.\n");
+      }
     }
   } else if (strcmp(command, "branch") == 0) {
     if (argc < 3) {

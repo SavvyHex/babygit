@@ -103,3 +103,12 @@ void checkout_branch(Repository* repo, const char* branch_name) {
 
     printf("Switched to branch %s\n", branch_name);
 }
+
+Branch* create_branch_silent(Repository* repo, const char* name) {
+    Branch* branch = malloc(sizeof(Branch));
+    strncpy(branch->name, name, sizeof(branch->name));
+    branch->head = NULL;
+    branch->next = repo->branches;
+    repo->branches = branch;
+    return branch;
+}

@@ -28,20 +28,19 @@ Commit *create_commit(Repository *repo, const char *message, const char *author)
         strncpy(commit->parent_hash, commit->parent->hash, sizeof(commit->parent_hash) - 1);
     }
 
-    // Include staged files in commit content
-    char files_buf[1024] = "";
+    char files_buf[2048] = "";
     for (int i = 0; i < repo->staged_count; i++) {
-        strcat(files_buf, repo->staged_files[i].hash);
-        strcat(files_buf, " ");
+        strcat(files_buf, "file ");
         strcat(files_buf, repo->staged_files[i].filename);
+        strcat(files_buf, " ");
+        strcat(files_buf, repo->staged_files[i].hash);
         strcat(files_buf, "\n");
     }
 
-    // Full commit content
-    char commit_content[4096];
     snprintf(commit_content, sizeof(commit_content),
-             "parent %s\nauthor %s\ntime %ld\nmessage %s\nfiles\n%s",
-             commit->parent_hash, commit->author, commit->timestamp, commit->message, files_buf);
+         "parent %s\nauthor %s\ntime %ld\nmessage %s\n%s",
+         commit->parent_hash, commit->author, commit->timestamp,
+         commit->message, files_buf);
 
     // Hash the commit content
     calculate_hash(commit_content, strlen(commit_content), commit->hash);
