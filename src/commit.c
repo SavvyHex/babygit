@@ -6,49 +6,73 @@
 #include <string.h>
 #include <time.h>
 
-Commit *create_commit(Repository *repo, const char *message,
-                      const char *author) {
-  if (!repo || !message || !author)
-    return NULL;
+Commit *create_commit(Repository *repo, const char *message, const char *author) {
+    if (!repo || !message || !author || repo->staged_count == 0)
+        return NULL;
 
-  Commit *commit = malloc(sizeof(Commit));
-  if (!commit)
-    return NULL;
+    Commit *commit = malloc(sizeof(Commit));
+    if (!commit)
+        return NULL;
 
-  // Set commit metadata
-  strncpy(commit->author, author, 255);
-  strncpy(commit->message, message, 1023);
-  commit->timestamp = time(NULL);
-  commit->next = NULL;
-  commit->parent = NULL;
-  commit->parent_hash[0] = '\0';
-  commit->second_parent[0] = '\0';
+    // Metadata
+    strncpy(commit->author, author, sizeof(commit->author) - 1);
+    strncpy(commit->message, message, sizeof(commit->message) - 1);
+    commit->timestamp = time(NULL);
+    commit->parent = NULL;
+    commit->next = NULL;
+    commit->parent_hash[0] = '\0';
+    commit->second_parent[0] = '\0';
 
-  // Set parent if exists
-  if (repo->current_branch && repo->current_branch->head) {
-    commit->parent = repo->current_branch->head;
-    strncpy(commit->parent_hash, repo->current_branch->head->hash, 40);
-  }
+    if (repo->current_branch && repo->current_branch->head) {
+        commit->parent = repo->current_branch->head;
+        strncpy(commit->parent_hash, commit->parent->hash, sizeof(commit->parent_hash) - 1);
+    }
 
-  // Generate commit content and hash
-  char commit_content[2048];
-  sprintf(commit_content, "parent %s\nauthor %s\ntime %ld\nmessage %s\n",
-          commit->parent_hash, author, commit->timestamp, message);
+    // Include staged files in commit content
+    char files_buf[1024] = "";
+    for (int i = 0; i < repo->staged_count; i++) {
+        strcat(files_buf, repo->staged_files[i].hash);
+        strcat(files_buf, " ");
+        strcat(files_buf, repo->staged_files[i].filename);
+        strcat(files_buf, "\n");
+    }
 
-  calculate_hash(commit_content, strlen(commit_content), commit->hash);
+    // Full commit content
+    char commit_content[4096];
+    snprintf(commit_content, sizeof(commit_content),
+             "parent %s\nauthor %s\ntime %ld\nmessage %s\nfiles\n%s",
+             commit->parent_hash, commit->author, commit->timestamp, commit->message, files_buf);
 
-  // Store commit object
-  char commit_path[256];
-  sprintf(commit_path, ".babygit/objects/%s", commit->hash);
-  FILE *commit_file = fopen(commit_path, "w");
-  if (!commit_file) {
-    free(commit);
-    return NULL;
-  }
-  fprintf(commit_file, "%s", commit_content);
-  fclose(commit_file);
+    // Hash the commit content
+    calculate_hash(commit_content, strlen(commit_content), commit->hash);
 
-  return commit;
+    // Save to disk
+    char commit_path[256];
+    snprintf(commit_path, sizeof(commit_path), ".babygit/objects/%s", commit->hash);
+    FILE *commit_file = fopen(commit_path, "w");
+    if (!commit_file) {
+        free(commit);
+        return NULL;
+    }
+    fprintf(commit_file, "%s", commit_content);
+    fclose(commit_file);
+
+    // Update current branch
+    if (repo->current_branch) {
+        repo->current_branch->head = commit;
+    }
+
+    // Add to repo->commits list
+    commit->next = repo->commits;
+    repo->commits = commit;
+
+    // Clear staging area
+    repo->staged_count = 0;
+    free(repo->staged_files);
+    repo->staged_files = NULL;
+    remove(".babygit/index");  // Clear index file
+
+    return commit;
 }
 
 Commit *find_commit(Repository *repo, const char *hash) {
@@ -65,16 +89,13 @@ Commit *find_commit(Repository *repo, const char *hash) {
   return NULL;
 }
 
-
 Commit* load_commit(const char* hash) {
+    if (!hash) return NULL;
+
     char path[256];
     snprintf(path, sizeof(path), ".babygit/objects/%s", hash);
-
     FILE* file = fopen(path, "r");
-    if (!file) {
-        perror("Failed to open commit file");
-        return NULL;
-    }
+    if (!file) return NULL;
 
     Commit* commit = malloc(sizeof(Commit));
     if (!commit) {
@@ -82,24 +103,28 @@ Commit* load_commit(const char* hash) {
         return NULL;
     }
 
-    strncpy(commit->hash, hash, sizeof(commit->hash));
-    commit->hash[sizeof(commit->hash) - 1] = '\0';
-
-    // Read message and author (assuming each is one line)
-    if (!fgets(commit->message, sizeof(commit->message), file) ||
-        !fgets(commit->author, sizeof(commit->author), file)) {
-        free(commit);
-        fclose(file);
-        return NULL;
-    }
-
-    // Remove newline characters
-    commit->message[strcspn(commit->message, "\n")] = 0;
-    commit->author[strcspn(commit->author, "\n")] = 0;
-
-    // For simplicity, we’re ignoring parent/next for now
+    char line[1024];
+    commit->parent_hash[0] = '\0';
+    commit->author[0] = '\0';
+    commit->message[0] = '\0';
+    commit->timestamp = 0;
     commit->parent = NULL;
     commit->next = NULL;
+
+    strncpy(commit->hash, hash, sizeof(commit->hash));
+
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "parent ", 7) == 0) {
+            sscanf(line + 7, "%40s", commit->parent_hash);
+        } else if (strncmp(line, "author ", 7) == 0) {
+            sscanf(line + 7, "%255[^\n]", commit->author);
+        } else if (strncmp(line, "time ", 5) == 0) {
+            sscanf(line + 5, "%ld", &commit->timestamp);
+        } else if (strncmp(line, "message ", 8) == 0) {
+            sscanf(line + 8, "%1023[^\n]", commit->message);
+        }
+        // Ignore files section for now
+    }
 
     fclose(file);
     return commit;

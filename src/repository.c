@@ -42,7 +42,7 @@ Repository *init_repository() {
     repo->staged_files = NULL;
     repo->staged_count = 0;
 
-    ensure_main_branch(*repo);
+    ensure_main_branch(repo);
 
     printf("Initialized empty babygit repository\n");
     return repo;
