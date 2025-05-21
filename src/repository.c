@@ -5,8 +5,17 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <dirent.h>
+#include <unistd.h>
 #include <sys/stat.h>
+
+void ensure_main_branch(Repository* repo) {
+    if (!find_branch(repo, "main")) {
+        create_branch(repo, "main");
+        checkout_branch(repo, "main");
+    }
+}
 
 Repository *init_repository() {
   // Create directory structure
@@ -36,14 +45,60 @@ Repository *init_repository() {
   repo->staged_files = NULL;
   repo->staged_count = 0;
 
+  // Create initial 'main' branch
+  Branch* main = create_branch(repo, "main");
+  checkout_branch(repo, "main");
+
   printf("Initialized empty babygit repository\n");
   return repo;
 }
 
-void save_repository(Repository *repo) {
-  if (!repo)
-    return;
-  // TODO: Implement actual saving to disk
+void save_repository(Repository* repo) {
+    if (!repo) return;
+
+    // Ensure .babygit directory structure exists
+    mkdir(".babygit", 0755);
+    mkdir(".babygit/objects", 0755);
+    mkdir(".babygit/refs", 0755);
+    mkdir(".babygit/refs/heads", 0755);
+
+    // Save HEAD
+    FILE* head_file = fopen(".babygit/HEAD", "w");
+    if (head_file) {
+        if (repo->current_branch) {
+            fprintf(head_file, "ref: refs/heads/%s\n", repo->current_branch->name);
+        } else {
+            fprintf(head_file, "ref: refs/heads/main\n");
+        }
+        fclose(head_file);
+    }
+
+    // Save branches
+    Branch* branch = repo->branches;
+    while (branch) {
+        char branch_path[256];
+        snprintf(branch_path, sizeof(branch_path), ".babygit/refs/heads/%s", branch->name);
+        
+        FILE* branch_file = fopen(branch_path, "w");
+        if (branch_file) {
+            if (branch->head) {
+                fprintf(branch_file, "%s", branch->head->hash);
+            }
+            fclose(branch_file);
+        }
+        branch = branch->next;
+    }
+
+    // Save staged files (simplified example)
+    FILE* index_file = fopen(".babygit/index", "w");
+    if (index_file) {
+        for (int i = 0; i < repo->staged_count; i++) {
+            fprintf(index_file, "%s %s\n", 
+                   repo->staged_files[i].hash, 
+                   repo->staged_files[i].filename);
+        }
+        fclose(index_file);
+    }
 }
 
 void free_repository(Repository *repo) {
@@ -88,15 +143,36 @@ void load_branches(Repository* repo) {
 }
 
 Repository* load_repository() {
-    if (!file_exists(".babygit/HEAD")) return NULL;
-
+    if (access(".babygit", F_OK) != 0) return NULL;
+    
     Repository* repo = malloc(sizeof(Repository));
+    // Initialize all members
     repo->branches = NULL;
     repo->current_branch = NULL;
-    repo->commits = NULL;
-    repo->staged_files = NULL;
-    repo->staged_count = 0;
-
-    load_branches(repo);
+    
+    // Load existing branches
+    DIR* dir = opendir(".babygit/refs/heads");
+    if (dir) {
+        struct dirent* entry;
+        while ((entry = readdir(dir)) != NULL) {
+            if (entry->d_type == DT_REG) {
+                create_branch(repo, entry->d_name);
+            }
+        }
+        closedir(dir);
+    }
+    
+    // Ensure main branch exists
+    ensure_main_branch(repo);
+    
+    // Load HEAD
+    FILE* head = fopen(".babygit/HEAD", "r");
+    if (head) {
+        char ref[256];
+        fscanf(head, "ref: refs/heads/%255s", ref);
+        checkout_branch(repo, ref);
+        fclose(head);
+    }
+    
     return repo;
 }

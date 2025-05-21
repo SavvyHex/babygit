@@ -6,18 +6,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-Branch* create_branch(Repository* repo, const char* branch_name) {
-    if (!repo || !branch_name) return NULL;
+Branch* create_branch(Repository* repo, const char* name) {
+    // Validate inputs
+    if (!repo || !name) return NULL;
     
     // Check if branch already exists
-    if (find_branch(repo, branch_name)) {
-        printf("Branch %s already exists\n", branch_name);
+    if (find_branch(repo, name)) {
+        printf("Branch %s already exists\n", name);
         return NULL;
     }
 
+    // Allocate and initialize new branch
     Branch* branch = malloc(sizeof(Branch));
-    strncpy(branch->name, branch_name, 255);
+    if (!branch) return NULL;
+    
+    strncpy(branch->name, name, sizeof(branch->name) - 1);
+    branch->name[sizeof(branch->name) - 1] = '\0'; // Ensure null-termination
+    
+    // Set head commit to current branch's head if exists
     branch->head = repo->current_branch ? repo->current_branch->head : NULL;
+    
     branch->parent = repo->current_branch;
     branch->children = NULL;
     branch->next = NULL;
@@ -26,23 +34,27 @@ Branch* create_branch(Repository* repo, const char* branch_name) {
     if (!repo->branches) {
         repo->branches = branch;
     } else {
-        Branch* last = repo->branches;
-        while (last->next) last = last->next;
-        last->next = branch;
+        Branch* current = repo->branches;
+        while (current->next) current = current->next;
+        current->next = branch;
     }
-
-    // Create branch reference file
-    char branch_path[256];
-    snprintf(branch_path, sizeof(branch_path), ".babygit/refs/heads/%s", branch_name);
-    FILE* branch_file = fopen(branch_path, "w");
-    if (branch_file) {
+    
+    // Create reference file
+    char path[256];
+    snprintf(path, sizeof(path), ".babygit/refs/heads/%s", name);
+    
+    FILE* f = fopen(path, "w");
+    if (f) {
         if (branch->head) {
-            fprintf(branch_file, "%s", branch->head->hash);
+            fprintf(f, "%s", branch->head->hash); // Write commit hash if exists
         }
-        fclose(branch_file);
+        fclose(f);
+    } else {
+        printf("Warning: Could not create branch reference file\n");
+        // Don't fail - we still have in-memory representation
     }
-
-    printf("Created branch %s\n", branch_name);
+    
+    printf("Created branch %s\n", name);
     return branch;
 }
 
