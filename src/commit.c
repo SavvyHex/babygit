@@ -25,7 +25,11 @@ Commit *create_commit(Repository *repo, const char *message, const char *author)
 
     // Metadata
     strncpy(commit->author, author, sizeof(commit->author) - 1);
+    commit->author[sizeof(commit->author) - 1] = '\0';
+
     strncpy(commit->message, message, sizeof(commit->message) - 1);
+    commit->message[sizeof(commit->message) - 1] = '\0';
+
     commit->timestamp = time(NULL);
     commit->parent = NULL;
     commit->next = NULL;
@@ -35,7 +39,11 @@ Commit *create_commit(Repository *repo, const char *message, const char *author)
     if (repo->current_branch && repo->current_branch->head) {
         commit->parent = repo->current_branch->head;
         strncpy(commit->parent_hash, commit->parent->hash, sizeof(commit->parent_hash) - 1);
+        commit->parent_hash[sizeof(commit->parent_hash) - 1] = '\0';
     }
+
+    printf("DEBUG: Creating commit on branch '%s'\n", repo->current_branch ? repo->current_branch->name : "NULL");
+    printf("DEBUG: Parent commit hash: %s\n", commit->parent_hash[0] ? commit->parent_hash : "None");
 
     char files_buf[2048] = "";
     for (int i = 0; i < repo->staged_count; i++) {
@@ -48,14 +56,12 @@ Commit *create_commit(Repository *repo, const char *message, const char *author)
 
     char commit_content[4096];
     snprintf(commit_content, sizeof(commit_content),
-         "parent %s\nauthor %s\ntime %ld\nmessage %s\n%s",
+         "parent %s\nauthor %s\ntime %ld\nmessage %s\nfiles\n%s",
          commit->parent_hash, commit->author, commit->timestamp,
          commit->message, files_buf);
 
-    // Hash the commit content
     calculate_hash(commit_content, strlen(commit_content), commit->hash);
 
-    // Save to disk
     char commit_path[256];
     snprintf(commit_path, sizeof(commit_path), ".babygit/objects/%s", commit->hash);
     FILE *commit_file = fopen(commit_path, "w");
@@ -74,29 +80,33 @@ Commit *create_commit(Repository *repo, const char *message, const char *author)
         return NULL;
     }
 
-    // Update current branch
+    // Update current branch HEAD
     if (repo->current_branch) {
+        printf("DEBUG: Updating HEAD of branch '%s' to new commit %s\n", repo->current_branch->name, commit->hash);
         repo->current_branch->head = commit;
     }
 
-    Branch *current = repo->branches;
-    while (current) {
-        if (strcmp(current->name, repo->current_branch->name) == 0) {
-            current->head = commit;
-            break;  // branch found and updated, can exit loop
+    // Update branch list HEAD as well
+    Branch *cur_branch = repo->branches;
+    while (cur_branch) {
+        if (strcmp(cur_branch->name, repo->current_branch->name) == 0) {
+            cur_branch->head = commit;
+            break;
         }
-        current = current->next;
+        cur_branch = cur_branch->next;
     }
 
-    // Add to repo->commits list
+    // Add to repo commit list
     commit->next = repo->commits;
     repo->commits = commit;
 
-    // Clear staging area
+    // Clear staging
     repo->staged_count = 0;
-    free(repo->staged_files);
-    repo->staged_files = NULL;
-    remove(".babygit/index");  // Clear index file
+    if (repo->staged_files) {
+        free(repo->staged_files);
+        repo->staged_files = NULL;
+    }
+    remove(".babygit/index");
 
     return commit;
 }
@@ -138,6 +148,7 @@ Commit* load_commit(const char* hash) {
     commit->next = NULL;
 
     strncpy(commit->hash, hash, sizeof(commit->hash));
+    commit->hash[sizeof(commit->hash) - 1] = '\0';
 
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "parent ", 7) == 0) {
@@ -149,11 +160,13 @@ Commit* load_commit(const char* hash) {
         } else if (strncmp(line, "message ", 8) == 0) {
             sscanf(line + 8, "%1023[^\n]", commit->message);
         }
-        // Ignore files section for now
+        // ignoring files for now
     }
 
     fclose(file);
     return commit;
 }
 
-void free_commit(Commit *commit) { free(commit); }
+void free_commit(Commit *commit) {
+    free(commit);
+}
