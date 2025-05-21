@@ -12,7 +12,6 @@ Branch* create_branch(Repository* repo, const char* name) {
     
     // Check if branch already exists
     if (find_branch(repo, name)) {
-        printf("Branch %s already exists\n", name);
         return NULL;
     }
 

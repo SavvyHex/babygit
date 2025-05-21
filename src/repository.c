@@ -143,35 +143,33 @@ void load_branches(Repository* repo) {
 }
 
 Repository* load_repository() {
+    // Check .babygit exists first
     if (access(".babygit", F_OK) != 0) return NULL;
-    
+
     Repository* repo = malloc(sizeof(Repository));
-    // Initialize all members
-    repo->branches = NULL;
-    repo->current_branch = NULL;
+    // Initialize all members to NULL/0
     
     // Load existing branches
     DIR* dir = opendir(".babygit/refs/heads");
     if (dir) {
         struct dirent* entry;
         while ((entry = readdir(dir)) != NULL) {
-            if (entry->d_type == DT_REG) {
-                create_branch(repo, entry->d_name);
-            }
+            if (strcmp(entry->d_name, ".") == 0 || 
+                strcmp(entry->d_name, "..") == 0) continue;
+                
+            create_branch(repo, entry->d_name);
         }
         closedir(dir);
     }
-    
-    // Ensure main branch exists
-    ensure_main_branch(repo);
-    
+
     // Load HEAD
-    FILE* head = fopen(".babygit/HEAD", "r");
-    if (head) {
-        char ref[256];
-        fscanf(head, "ref: refs/heads/%255s", ref);
-        checkout_branch(repo, ref);
-        fclose(head);
+    FILE* head_file = fopen(".babygit/HEAD", "r");
+    if (head_file) {
+        char branch_name[256];
+        if (fscanf(head_file, "ref: refs/heads/%255s", branch_name) == 1) {
+            checkout_branch(repo, branch_name);
+        }
+        fclose(head_file);
     }
     
     return repo;
