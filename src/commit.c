@@ -170,3 +170,15 @@ Commit* load_commit(const char* hash) {
 void free_commit(Commit *commit) {
     free(commit);
 }
+
+Commit* find_commit_by_hash(Repository* repo, const char* hash){
+    if (!hash) return NULL;
+    Commit* current = repo->commits; // Adjust this to your actual commit list
+    while (current) {
+        if (strcmp(current->hash, hash) == 0) {
+            return current;
+        }
+        current = current->next;  // or however commits are linked/stored
+    }
+    return NULL;
+}
