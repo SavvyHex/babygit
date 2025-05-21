@@ -59,11 +59,13 @@ int main(int argc, char **argv) {
       printf("Usage: %s branch <name>\n", argv[0]);
     } else {
       create_branch(repo, argv[2]);
+      load_all_branch_heads(repo);
     }
   } else if (strcmp(command, "checkout") == 0) {
     if (argc < 3) {
       printf("Usage: %s checkout <branch>\n", argv[0]);
     } else {
+      load_all_branch_heads(repo);
       checkout_branch(repo, argv[2]);
     }
   } else if (strcmp(command, "status") == 0) {

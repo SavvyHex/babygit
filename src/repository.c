@@ -36,6 +36,9 @@ Repository *init_repository() {
     if (!repo)
         return NULL;
 
+    load_branches(repo);
+    load_all_branch_heads(repo);
+
     repo->branches = NULL;
     repo->current_branch = NULL;
     repo->commits = NULL;

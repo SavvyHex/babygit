@@ -6,6 +6,26 @@
 #include <stdlib.h>
 #include <string.h>
 
+void load_branch_head(Branch* branch) {
+    char path[512];
+    snprintf(path, sizeof(path), ".babygit/refs/heads/%s", branch->name);
+    FILE* f = fopen(path, "r");
+    if (!f) {
+        branch->head = NULL;
+        return;
+    }
+    char hash[41];
+    if (fgets(hash, sizeof(hash), f)) {
+        // remove trailing newline
+        hash[strcspn(hash, "\n")] = 0;
+        // find commit object by hash
+        branch->head = find_commit_by_hash(hash);
+    } else {
+        branch->head = NULL;
+    }
+    fclose(f);
+}
+
 Branch* create_branch(Repository* repo, const char* name) {
     if (!repo || !name) return NULL;
 
@@ -55,6 +75,7 @@ Branch* create_branch(Repository* repo, const char* name) {
     }
 
     printf("Created branch %s\n", name);
+    load_branch_head(branch);
     return branch;
 }
 
@@ -90,6 +111,8 @@ void checkout_branch(Repository* repo, const char* branch_name) {
         printf("Branch %s not found\n", branch_name);
         return;
     }
+
+    load_branch_head(branch);
 
     repo->current_branch = branch;
 
@@ -152,4 +175,12 @@ void set_branch_head(Branch* branch, Commit* commit) {
     if (!branch) return;
     branch->head = commit;
     update_branch_ref(branch);
+}
+
+void load_all_branch_heads(Repository* repo) {
+    Branch* cur = repo->branches;
+    while (cur) {
+        load_branch_head(cur);
+        cur = cur->next;
+    }
 }
