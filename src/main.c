@@ -33,7 +33,11 @@ int main(int argc, char **argv) {
     if (argc < 3) {
       printf("Usage: %s add <file>\n", argv[0]);
     } else {
-      add_to_index(repo, argv[2]);
+        if (strcmp(argv[2], ".") == 0) {
+            update_file_status(repo);  // Stage all files in current directory
+        } else {
+            add_to_index(repo, argv[2]);
+        }
     }
   } else if (strcmp(command, "commit") == 0) {
     if (argc < 4) {
