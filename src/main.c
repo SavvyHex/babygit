@@ -49,6 +49,7 @@ int main(int argc, char **argv) {
       if (commit) {
         printf("Committed: %s\n", commit->hash);
         clear_staging_area(repo);
+        repo->current_branch->head = commit;
       } else {
         printf("Commit failed. Nothing to commit or an error occurred.\n");
       }
