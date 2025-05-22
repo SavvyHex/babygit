@@ -16,6 +16,22 @@ typedef struct {
     int conflict; // 0 = no conflict, 1 = conflict
 } FileMergeStatus;
 
+// Find the common ancestor of two commits
+static Commit* find_common_ancestor(Commit* a, Commit* b) {
+    // Simple implementation - for real Git you'd need a more sophisticated algorithm
+    while (a) {
+        Commit* temp = b;
+        while (temp) {
+            if (strcmp(a->hash, temp->hash) == 0) {
+                return a;
+            }
+            temp = temp->parent;
+        }
+        a = a->parent;
+    }
+    return NULL;
+}
+
 static int compare_file_versions(const char* filename, 
                                const char* base_content,
                                const char* our_content, 
