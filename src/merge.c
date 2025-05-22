@@ -7,6 +7,56 @@
 #include <string.h>
 #include <dirent.h>
 
+#define MAX_FILES 1024
+
+typedef struct {
+    char filename[256];
+    char hash[41];
+} FileRecord;
+
+typedef struct {
+    char filename[256];
+    char base_hash[41];
+    char our_hash[41];
+    char their_hash[41];
+} FileEntry;
+
+static char* find_hash_for_file(const char* filename, FileRecord* files, int count) {
+    for (int i = 0; i < count; i++) {
+        if (strcmp(files[i].filename, filename) == 0)
+            return files[i].hash;
+    }
+    return NULL;
+}
+
+static int filename_exists(char filenames[][256], int count, const char* filename) {
+    for (int i = 0; i < count; i++) {
+        if (strcmp(filenames[i], filename) == 0)
+            return 1;
+    }
+    return 0;
+}
+
+
+static void collect_unique_filenames(FileRecord* base_files, int base_count,
+                                     FileRecord* our_files, int our_count,
+                                     FileRecord* their_files, int their_count,
+                                     char filenames[][256], int* filename_count) {
+    *filename_count = 0;
+    for (int i = 0; i < base_count; i++) {
+        if (!filename_exists(filenames, *filename_count, base_files[i].filename))
+            strcpy(filenames[(*filename_count)++], base_files[i].filename);
+    }
+    for (int i = 0; i < our_count; i++) {
+        if (!filename_exists(filenames, *filename_count, our_files[i].filename))
+            strcpy(filenames[(*filename_count)++], our_files[i].filename);
+    }
+    for (int i = 0; i < their_count; i++) {
+        if (!filename_exists(filenames, *filename_count, their_files[i].filename))
+            strcpy(filenames[(*filename_count)++], their_files[i].filename);
+    }
+}
+
 // File comparison structure
 typedef struct {
     char filename[256];
@@ -120,60 +170,98 @@ static int compare_file_versions(const char* filename,
     return 0;
 }
 
-static int perform_three_way_merge(Repository* repo, 
-                                 Commit* base_commit,
-                                 Commit* our_commit, 
-                                 Commit* their_commit) {
-    FileMergeStatus files[100]; // Array to track files
-    int file_count = 0;
-    int has_conflicts = 0;
-
-    // 1. Collect all unique files from all three commits
-    // (Implementation would need to walk commit trees here)
-    
-    // 2. For each file, compare all three versions
-    for (int i = 0; i < file_count; i++) {
-        char* base_content = NULL; // Would load from base commit
-        char* our_content = NULL;  // Would load from our commit
-        char* their_content = NULL; // Would load from their commit
-        char* merged_content = NULL;
-
-        // Get file contents from each version
-        // (Implementation would need to load file contents from objects)
-
-        int conflict = compare_file_versions(files[i].filename,
-                                           base_content,
-                                           our_content,
-                                           their_content,
-                                           &merged_content);
-
-        if (conflict) {
-            printf("Conflict in %s\n", files[i].filename);
-            files[i].conflict = 1;
-            has_conflicts = 1;
-            
-            // Write conflict markers to working directory
-            FILE* f = fopen(files[i].filename, "w");
-            if (f) {
-                fwrite(merged_content, 1, strlen(merged_content), f);
-                fclose(f);
-            }
-        } else if (merged_content) {
-            // Write merged version to working directory
-            FILE* f = fopen(files[i].filename, "w");
-            if (f) {
-                fwrite(merged_content, 1, strlen(merged_content), f);
-                fclose(f);
-            }
-        }
-
-        free(base_content);
-        free(our_content);
-        free(their_content);
-        free(merged_content);
+// Fill in the list of files and blob hashes from the commit’s tree
+int get_commit_files(Commit* commit, FileRecord* files, int* count) {
+    char* commit_content = read_object_file(commit->hash);
+    if (!commit_content) {
+        fprintf(stderr, "Failed to read commit object: %s\n", commit->hash);
+        return 0;
     }
 
-    return has_conflicts;
+    char tree_hash[41];
+    if (!extract_tree_hash(commit_content, tree_hash)) {
+        fprintf(stderr, "Tree hash not found in commit.\n");
+        free(commit_content);
+        return 0;
+    }
+    free(commit_content);
+
+    char* tree_content = read_object_file(tree_hash);
+    if (!tree_content) {
+        fprintf(stderr, "Failed to read tree object: %s\n", tree_hash);
+        return 0;
+    }
+
+    *count = 0;
+    char* line = strtok(tree_content, "\n");
+    while (line != NULL && *count < MAX_FILES) {
+        char hash[41], filename[256];
+        if (sscanf(line, "%40s %255[^\n]", hash, filename) == 2) {
+            strncpy(files[*count].hash, hash, 41);
+            strncpy(files[*count].filename, filename, 256);
+            (*count)++;
+        }
+        line = strtok(NULL, "\n");
+    }
+
+    free(tree_content);
+    return 1;
+}
+
+void perform_three_way_merge(Commit* base, Commit* ours, Commit* theirs) {
+    FileRecord base_files[MAX_FILES], our_files[MAX_FILES], their_files[MAX_FILES];
+    int base_count = 0, our_count = 0, their_count = 0;
+
+    get_commit_files(base, base_files, &base_count);
+    get_commit_files(ours, our_files, &our_count);
+    get_commit_files(theirs, their_files, &their_count);
+
+    char filenames[MAX_FILES][256];
+    int filename_count = 0;
+
+    collect_unique_filenames(base_files, base_count, our_files, our_count, their_files, their_count, filenames, &filename_count);
+
+    printf("Starting three-way merge...\n");
+
+    for (int i = 0; i < filename_count; i++) {
+        const char* fname = filenames[i];
+        char* base_hash = find_hash_for_file(fname, base_files, base_count);
+        char* our_hash = find_hash_for_file(fname, our_files, our_count);
+        char* their_hash = find_hash_for_file(fname, their_files, their_count);
+
+        char* base_content = base_hash ? read_object_file(base_hash) : NULL;
+        char* our_content = our_hash ? read_object_file(our_hash) : NULL;
+        char* their_content = their_hash ? read_object_file(their_hash) : NULL;
+
+        char* merged_content = NULL;
+        int conflict = compare_file_versions(fname,
+                                             base_content ? base_content : "",
+                                             our_content ? our_content : "",
+                                             their_content ? their_content : "",
+                                             &merged_content);
+
+        FILE* f = fopen(fname, "w");
+        if (!f) {
+            perror("fopen");
+            continue;
+        }
+
+        fprintf(f, "%s", merged_content);
+        fclose(f);
+
+        if (conflict) {
+            printf("Conflict in %s. Marked with conflict markers.\n", fname);
+        } else {
+            printf("Merged %s successfully.\n", fname);
+        }
+
+        free(merged_content);
+        if (base_content) free(base_content);
+        if (our_content) free(our_content);
+        if (their_content) free(their_content);
+    }
+
+    printf("Merge completed.\n");
 }
 
 Commit* create_merge_commit(Repository* repo, const char* message, const char* author, 
