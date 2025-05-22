@@ -47,7 +47,7 @@ char* read_object_file(const char* hash) {
     return content;
 }
 
-static int extract_tree_hash(const char* commit_content, char* tree_hash_out) {
+int extract_tree_hash(const char* commit_content, char* tree_hash_out) {
     // Assume the commit content starts with something like: "tree <hash>\n"
     const char* tree_line_prefix = "tree ";
     const size_t hash_length = 40;
