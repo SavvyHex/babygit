@@ -46,3 +46,21 @@ char* read_object_file(const char* hash) {
     
     return content;
 }
+
+static int extract_tree_hash(const char* commit_content, char* tree_hash_out) {
+    // Assume the commit content starts with something like: "tree <hash>\n"
+    const char* tree_line_prefix = "tree ";
+    const size_t hash_length = 40;
+
+    const char* tree_line = strstr(commit_content, tree_line_prefix);
+    if (!tree_line) {
+        fprintf(stderr, "Error: tree line not found in commit content.\n");
+        return 0;
+    }
+
+    tree_line += strlen(tree_line_prefix); // Move past "tree "
+    strncpy(tree_hash_out, tree_line, hash_length);
+    tree_hash_out[hash_length] = '\0'; // Null-terminate
+
+    return 1;
+}

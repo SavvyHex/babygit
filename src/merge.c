@@ -327,11 +327,8 @@ int merge_branches(Repository* repo, const char* branch_name) {
     }
     
     // Perform the merge
-    if (perform_three_way_merge(repo, ancestor, ours, theirs) != 0) {
-        printf("Merge conflicts detected!\n");
-        return 1; // Return conflict status
-    }
-    
+    perform_three_way_merge(ancestor, ours, theirs);
+
     // Create merge commit
     char message[256];
     snprintf(message, sizeof(message), "Merge branch '%s'", branch_name);
