@@ -130,7 +130,28 @@ void load_branches(Repository *repo) {
 
   while ((entry = readdir(dir)) != NULL) {
     if (entry->d_type == DT_REG) {
-      create_branch(repo, entry->d_name);
+      Branch *branch = create_branch(repo, entry->d_name);
+      if (!branch) continue;
+
+      // Read commit hash from branch ref file
+      char ref_path[512];
+      snprintf(ref_path, sizeof(ref_path), ".babygit/refs/heads/%s", entry->d_name);
+
+      FILE *f = fopen(ref_path, "r");
+      if (!f) continue;
+
+      char commit_hash[41];
+      if (fgets(commit_hash, sizeof(commit_hash), f)) {
+        // Remove newline if present
+        commit_hash[strcspn(commit_hash, "\r\n")] = 0;
+
+        // Load the commit struct from the hash
+        Commit *commit = load_commit_by_hash(repo, commit_hash);
+        if (commit) {
+          branch->head = commit;
+        }
+      }
+      fclose(f);
     }
   }
   closedir(dir);
