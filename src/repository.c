@@ -118,7 +118,6 @@ void free_repository(Repository *repo) {
   free(repo);
 }
 
-// Helper to parse commit file content and create a Commit struct
 Commit* parse_commit_content(const char* commit_hash, const char* content) {
     Commit *commit = malloc(sizeof(Commit));
     if (!commit) return NULL;
@@ -126,18 +125,9 @@ Commit* parse_commit_content(const char* commit_hash, const char* content) {
     memset(commit, 0, sizeof(Commit));
     strncpy(commit->hash, commit_hash, sizeof(commit->hash) - 1);
 
-    // Parse commit content line by line
-    // Expected format:
-    // parent <parent_hash>
-    // author <author>
-    // time <timestamp>
-    // message <message>
-    // file lines...
-
     const char *pos = content;
     char line[1024];
     while (*pos) {
-        // Read one line
         int i = 0;
         while (*pos && *pos != '\n' && i < (int)(sizeof(line) - 1)) {
             line[i++] = *pos++;
@@ -154,17 +144,15 @@ Commit* parse_commit_content(const char* commit_hash, const char* content) {
         } else if (strncmp(line, "message ", 8) == 0) {
             strncpy(commit->message, line + 8, sizeof(commit->message) - 1);
         } 
-        // You can parse files or other info here if needed
     }
 
-    commit->parent = NULL;  // You may link parents later if you want
+    commit->parent = NULL;
     commit->next = NULL;
-    commit->second_parent[0] = '\0'; // Clear if unused
+    commit->second_parent[0] = '\0';
 
     return commit;
 }
 
-// Main function to load commit by hash
 Commit* load_commit_by_hash(Repository *repo, const char *hash) {
     if (!repo || !hash) return NULL;
 
@@ -172,7 +160,7 @@ Commit* load_commit_by_hash(Repository *repo, const char *hash) {
     Commit *cur = repo->commits;
     while (cur) {
         if (strncmp(cur->hash, hash, 40) == 0) {
-            return cur;  // Found cached commit
+            return cur;
         }
         cur = cur->next;
     }
@@ -187,12 +175,11 @@ Commit* load_commit_by_hash(Repository *repo, const char *hash) {
         return NULL;
     }
 
-    // Read entire file content into buffer
     fseek(f, 0, SEEK_END);
     long filesize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (filesize <= 0 || filesize >= 10000) {  // safeguard
+    if (filesize <= 0 || filesize >= 10000) {
         fclose(f);
         printf("load_commit_by_hash: Commit file size invalid or too large\n");
         return NULL;
@@ -209,7 +196,6 @@ Commit* load_commit_by_hash(Repository *repo, const char *hash) {
     content[filesize] = '\0';
     fclose(f);
 
-    // Parse commit content and create struct
     Commit *commit = parse_commit_content(hash, content);
     free(content);
 
@@ -218,7 +204,6 @@ Commit* load_commit_by_hash(Repository *repo, const char *hash) {
         return NULL;
     }
 
-    // Add commit to repo->commits cache list
     commit->next = repo->commits;
     repo->commits = commit;
 
@@ -240,7 +225,6 @@ void load_branches(Repository *repo) {
       Branch *branch = create_branch(repo, entry->d_name);
       if (!branch) continue;
 
-      // Read commit hash from branch ref file
       char ref_path[512];
       snprintf(ref_path, sizeof(ref_path), ".babygit/refs/heads/%s", entry->d_name);
 
@@ -249,10 +233,8 @@ void load_branches(Repository *repo) {
 
       char commit_hash[41];
       if (fgets(commit_hash, sizeof(commit_hash), f)) {
-        // Remove newline if present
         commit_hash[strcspn(commit_hash, "\r\n")] = 0;
 
-        // Load the commit struct from the hash
         Commit *commit = load_commit_by_hash(repo, commit_hash);
         if (commit) {
           branch->head = commit;
@@ -275,7 +257,6 @@ Repository *load_repository() {
   repo->staged_files = NULL;
   repo->staged_count = 0;
 
-  // Load existing branches
   DIR *dir = opendir(".babygit/refs/heads");
   if (dir) {
     struct dirent *entry;
@@ -287,7 +268,6 @@ Repository *load_repository() {
     closedir(dir);
   }
 
-  // Load HEAD and set current branch
   FILE *head_file = fopen(".babygit/HEAD", "r");
   if (head_file) {
     char branch_name[256];
@@ -297,7 +277,6 @@ Repository *load_repository() {
     fclose(head_file);
   }
 
-  // Now load commit for current branch
   Branch *branch = repo->current_branch;
   if (!branch) {
     fprintf(stderr, "Current branch not set. HEAD might be corrupt.\n");

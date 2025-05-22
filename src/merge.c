@@ -57,18 +57,15 @@ static void collect_unique_filenames(FileRecord* base_files, int base_count,
     }
 }
 
-// File comparison structure
 typedef struct {
     char filename[256];
     char base_hash[41];
     char our_hash[41];
     char their_hash[41];
-    int conflict; // 0 = no conflict, 1 = conflict
+    int conflict;
 } FileMergeStatus;
 
-// Find the common ancestor of two commits
 static Commit* find_common_ancestor(Commit* a, Commit* b) {
-    // Simple implementation - for real Git you'd need a more sophisticated algorithm
     while (a) {
         Commit* temp = b;
         while (temp) {

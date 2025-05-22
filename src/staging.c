@@ -34,16 +34,14 @@ void add_to_index(Repository *repo, const char *filepath) {
   calculate_hash(content, size, hash);
   free(content);
 
-  // Check if file already staged
   for (int i = 0; i < repo->staged_count; i++) {
     if (strcmp(repo->staged_files[i].filename, filepath) == 0) {
       strcpy(repo->staged_files[i].hash, hash);
-      repo->staged_files[i].status = 1; // Modified
+      repo->staged_files[i].status = 1;
       return;
     }
   }
 
-  // Add new file to staging
   FileStatus *new_files = realloc(repo->staged_files, (repo->staged_count + 1) *
                                                           sizeof(FileStatus));
   if (!new_files)
@@ -52,7 +50,7 @@ void add_to_index(Repository *repo, const char *filepath) {
   repo->staged_files = new_files;
   strncpy(repo->staged_files[repo->staged_count].filename, filepath, 255);
   strncpy(repo->staged_files[repo->staged_count].hash, hash, 40);
-  repo->staged_files[repo->staged_count].status = 2; // Added
+  repo->staged_files[repo->staged_count].status = 2;
   repo->staged_count++;
 
   printf("Added %s to staging area\n", filepath);

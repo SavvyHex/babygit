@@ -24,7 +24,6 @@ Commit *create_commit(Repository *repo, const char *message,
     return NULL;
   }
 
-  // Metadata
   strncpy(commit->author, author, sizeof(commit->author) - 1);
   strncpy(commit->message, message, sizeof(commit->message) - 1);
   commit->timestamp = time(NULL);
@@ -54,10 +53,8 @@ Commit *create_commit(Repository *repo, const char *message,
            commit->parent_hash, commit->author, commit->timestamp,
            commit->message, files_buf);
 
-  // Hash the commit content
   calculate_hash(commit_content, strlen(commit_content), commit->hash);
 
-  // Save to disk
   char commit_path[256];
   snprintf(commit_path, sizeof(commit_path), ".babygit/objects/%s",
            commit->hash);
@@ -78,20 +75,17 @@ Commit *create_commit(Repository *repo, const char *message,
     return NULL;
   }
 
-  // Update current branch
   if (repo->current_branch) {
     repo->current_branch->head = commit;
   }
 
-  // Add to repo->commits list
   commit->next = repo->commits;
   repo->commits = commit;
 
-  // Clear staging area
   repo->staged_count = 0;
   free(repo->staged_files);
   repo->staged_files = NULL;
-  remove(".babygit/index"); // Clear index file
+  remove(".babygit/index");
 
   return commit;
 }
@@ -146,7 +140,6 @@ Commit *load_commit(const char *hash) {
     } else if (strncmp(line, "message ", 8) == 0) {
       sscanf(line + 8, "%1023[^\n]", commit->message);
     }
-    // Ignore files section for now
   }
 
   fclose(file);

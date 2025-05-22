@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
       printf("Usage: %s add <file>\n", argv[0]);
     } else {
       if (strcmp(argv[2], ".") == 0) {
-        update_file_status(repo); // Stage all files in current directory
+        update_file_status(repo);
       } else {
         add_to_index(repo, argv[2]);
       }
