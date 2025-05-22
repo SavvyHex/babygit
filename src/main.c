@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
       printf("Usage: %s add <file>\n", argv[0]);
     } else {
       if (strcmp(argv[2], ".") == 0) {
-        update_file_status(repo); // Stage all files in current directory
+        update_file_status(repo);
       } else {
         add_to_index(repo, argv[2]);
       }
@@ -71,7 +71,10 @@ int main(int argc, char **argv) {
     if (argc < 3) {
       printf("Usage: %s merge <branch>\n", argv[0]);
     } else {
-      merge_branch(repo, argv[2]);
+      int result = merge_branches(repo, argv[2]);
+      if (result == 1) {
+        printf("Resolve conflicts and commit the result\n");
+      }
     }
   } else if (strcmp(command, "stash") == 0) {
     if (argc < 3) {

@@ -9,12 +9,10 @@ void stash_changes(Repository *repo, const char *message) {
   if (!repo || !message)
     return;
 
-  // Create a stash commit
   Commit *stash_commit = create_commit(repo, message, "stash");
   if (!stash_commit)
     return;
 
-  // Create stash item
   Stash *stash = malloc(sizeof(Stash));
   if (!stash)
     return;
@@ -23,7 +21,6 @@ void stash_changes(Repository *repo, const char *message) {
   stash->commit = stash_commit;
   stash->next = NULL;
 
-  // Add to stash list
   if (!repo->stashes) {
     repo->stashes = stash;
   } else {
