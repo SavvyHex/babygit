@@ -1,6 +1,6 @@
 #include "staging.h"
-#include "utils.h"
 #include "branch.h"
+#include "utils.h"
 
 #include <dirent.h>
 #include <stdio.h>
@@ -124,25 +124,28 @@ void print_status(Repository *repo) {
 }
 
 void save_index(Repository *repo) {
-  if (!repo) return;
+  if (!repo)
+    return;
 
   FILE *f = fopen(".babygit/index", "w");
-  if (!f) return;
+  if (!f)
+    return;
 
   for (int i = 0; i < repo->staged_count; i++) {
     fprintf(f, "%s %s %d\n", repo->staged_files[i].filename,
-                            repo->staged_files[i].hash,
-                            repo->staged_files[i].status);
+            repo->staged_files[i].hash, repo->staged_files[i].status);
   }
 
   fclose(f);
 }
 
 void load_index(Repository *repo) {
-  if (!repo) return;
+  if (!repo)
+    return;
 
   FILE *f = fopen(".babygit/index", "r");
-  if (!f) return;
+  if (!f)
+    return;
 
   char filename[256];
   char hash[41];
@@ -152,9 +155,10 @@ void load_index(Repository *repo) {
   repo->staged_count = 0;
 
   while (fscanf(f, "%255s %40s %d\n", filename, hash, &status) == 3) {
-    FileStatus *new_files = realloc(repo->staged_files,
-                                    (repo->staged_count + 1) * sizeof(FileStatus));
-    if (!new_files) break;
+    FileStatus *new_files = realloc(
+        repo->staged_files, (repo->staged_count + 1) * sizeof(FileStatus));
+    if (!new_files)
+      break;
 
     repo->staged_files = new_files;
     strncpy(repo->staged_files[repo->staged_count].filename, filename, 255);

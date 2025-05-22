@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "merge.h"
 #include "branch.h"
 #include "commit.h"
+#include "merge.h"
 
 void merge_branch(Repository *repo, const char *branch_name) {
   if (!repo || !branch_name)
