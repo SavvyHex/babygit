@@ -77,6 +77,15 @@ Commit *create_commit(Repository *repo, const char *message,
 
   if (repo->current_branch) {
     repo->current_branch->head = commit;
+
+    // Write the new commit hash to the branch ref file
+    char ref_path[256];
+    snprintf(ref_path, sizeof(ref_path), ".babygit/refs/heads/%s", repo->current_branch->name);
+    FILE *ref = fopen(ref_path, "w");
+    if (ref) {
+        fprintf(ref, "%s\n", commit->hash);
+        fclose(ref);
+    }
   }
 
   commit->next = repo->commits;
@@ -147,3 +156,130 @@ Commit *load_commit(const char *hash) {
 }
 
 void free_commit(Commit *commit) { free(commit); }
+
+char *write_tree_object(Repository *repo) {
+    if (!repo || !repo->staged_files || repo->staged_count == 0)
+        return NULL;
+
+    char tree_content[4096] = {0};
+    for (int i = 0; i < repo->staged_count; i++) {
+        char line[512];
+        snprintf(line, sizeof(line), "%s %s\n",
+                 repo->staged_files[i].filename,
+                 repo->staged_files[i].hash);
+        strncat(tree_content, line, sizeof(tree_content) - strlen(tree_content) - 1);
+    }
+
+    char hash[41];
+    calculate_hash(tree_content, strlen(tree_content), hash);
+
+    char obj_path[512];
+    snprintf(obj_path, sizeof(obj_path), ".babygit/objects/%s", hash);
+    FILE *f = fopen(obj_path, "w");
+    if (f) {
+        fputs(tree_content, f);
+        fclose(f);
+    }
+
+    // Return a malloc'd copy of the hash
+    char *tree_hash = malloc(41);
+    if (tree_hash)
+        strcpy(tree_hash, hash);
+    return tree_hash;
+}
+
+char *create_commit_with_tree(Repository *repo, const char *message,
+                      const char *author) {
+  if (!repo || !message || !author) {
+    printf("create_commit_with_tree: Invalid parameters\n");
+    return NULL;
+  }
+
+  if (repo->staged_count == 0) {
+    printf("create_commit_with_tree: No staged files to commit\n");
+    return NULL;
+  }
+
+  Commit *commit = malloc(sizeof(Commit));
+  if (!commit) {
+    printf("create_commit_with_tree: malloc failed\n");
+    return NULL;
+  }
+
+  strncpy(commit->author, author, sizeof(commit->author) - 1);
+  strncpy(commit->message, message, sizeof(commit->message) - 1);
+  commit->timestamp = time(NULL);
+  commit->parent = NULL;
+  commit->next = NULL;
+  commit->parent_hash[0] = '\0';
+  commit->second_parent[0] = '\0';
+
+  if (repo->current_branch && repo->current_branch->head) {
+    commit->parent = repo->current_branch->head;
+    strncpy(commit->parent_hash, commit->parent->hash,
+            sizeof(commit->parent_hash) - 1);
+  }
+
+  char *tree_hash = write_tree_object(repo);
+
+  char commit_content[4096];
+  snprintf(commit_content, sizeof(commit_content),
+           "parent %s\nauthor %s\ntime %ld\nmessage %s\ntree %s\n",
+           commit->parent_hash, commit->author, commit->timestamp,
+           commit->message, tree_hash ? tree_hash : "");
+
+  calculate_hash(commit_content, strlen(commit_content), commit->hash);
+
+  char commit_path[256];
+  snprintf(commit_path, sizeof(commit_path), ".babygit/objects/%s",
+           commit->hash);
+  FILE *commit_file = fopen(commit_path, "w");
+  if (!commit_file) {
+    printf("create_commit_with_tree: Failed to open commit file %s for writing\n",
+           commit_path);
+    free(commit);
+    if (tree_hash) free(tree_hash);
+    return NULL;
+  }
+
+  int written = fprintf(commit_file, "%s", commit_content);
+  fclose(commit_file);
+
+  if (written < 0) {
+    printf("create_commit_with_tree: Failed to write commit content\n");
+    free(commit);
+    if (tree_hash) free(tree_hash);
+    return NULL;
+  }
+
+  if (repo->current_branch) {
+    repo->current_branch->head = commit;
+
+    // Write the new commit hash to the branch ref file
+    char ref_path[256];
+    snprintf(ref_path, sizeof(ref_path), ".babygit/refs/heads/%s", repo->current_branch->name);
+    FILE *ref = fopen(ref_path, "w");
+    if (ref) {
+        fprintf(ref, "%s\n", commit->hash);
+        fclose(ref);
+    }
+  }
+
+  commit->next = repo->commits;
+  repo->commits = commit;
+
+  repo->staged_count = 0;
+  free(repo->staged_files);
+  repo->staged_files = NULL;
+  remove(".babygit/index");
+
+  // Return a malloc'd copy of the commit hash
+  char *commit_hash = malloc(41);
+  if (commit_hash)
+    strcpy(commit_hash, commit->hash);
+
+  if (tree_hash) free(tree_hash);
+  free(commit);
+
+  return commit_hash;
+}

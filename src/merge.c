@@ -171,7 +171,6 @@ static int compare_file_versions(const char* filename,
 int get_commit_files(Commit* commit, FileRecord* files, int* count) {
     char* commit_content = read_object_file(commit->hash);
     if (!commit_content) {
-        fprintf(stderr, "Failed to read commit object: %s\n", commit->hash);
         return 0;
     }
 
@@ -295,48 +294,28 @@ Commit* create_merge_commit(Repository* repo, const char* message, const char* a
     return merge_commit;
 }
 
-int merge_branches(Repository* repo, const char* branch_name) {
-    if (!repo || !branch_name) return -1;
-    
-    // Get current branch and target branch
-    Branch* current_branch = repo->current_branch;
-    Branch* target_branch = find_branch(repo, branch_name);
-    
-    if (!current_branch || !target_branch) {
-        printf("Error: Branches not found\n");
-        return -1;
-    }
-    
-    // Get the commits
-    Commit* ours = current_branch->head;
-    Commit* theirs = target_branch->head;
-    
-    if (!ours || !theirs) {
-        printf("Error: Branches have no commits\n");
-        return -1;
-    }
-    
+int merge_branches(Repository *repo, const char *branch_name) {
+    Commit *current_head = repo->current_branch ? repo->current_branch->head : NULL;
+    Branch *other_branch = find_branch(repo, branch_name);
+    Commit *other_head = other_branch ? other_branch->head : NULL;
+
     // Find common ancestor
-    Commit* ancestor = find_common_ancestor(ours, theirs);
-    if (!ancestor) {
-        printf("Error: No common ancestor found\n");
-        return -1;
-    }
+    Commit* ancestor = find_common_ancestor(current_head, other_head);
     
     // Perform the merge
-    perform_three_way_merge(ancestor, ours, theirs);
+    perform_three_way_merge(ancestor, current_head, other_head);
 
     // Create merge commit
     char message[256];
     snprintf(message, sizeof(message), "Merge branch '%s'", branch_name);
-    Commit* merge_commit = create_merge_commit(repo, message, "merger", ours, theirs);
+    Commit* merge_commit = create_merge_commit(repo, message, "merger", current_head, other_head);
     
     // Update current branch
-    current_branch->head = merge_commit;
+    repo->current_branch->head = merge_commit;
     
     // Update repository state
     char branch_path[256];
-    snprintf(branch_path, sizeof(branch_path), ".babygit/refs/heads/%s", current_branch->name);
+    snprintf(branch_path, sizeof(branch_path), ".babygit/refs/heads/%s", repo->current_branch->name);
     FILE* f = fopen(branch_path, "w");
     if (f) {
         fprintf(f, "%s", merge_commit->hash);

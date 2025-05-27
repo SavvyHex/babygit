@@ -25,12 +25,13 @@ Repository *init_repository() {
   ensure_directory_exists(".babygit/refs/remotes");
 
   FILE *head = fopen(".babygit/HEAD", "w");
-  if (!head) {
+  if (head) {
+    fprintf(head, "ref: refs/heads/main\n"); // was "master"
+    fclose(head);
+  } else {
     perror("Failed to create HEAD file");
     return NULL;
   }
-  fprintf(head, "ref: refs/heads/master\n");
-  fclose(head);
 
   Repository *repo = malloc(sizeof(Repository));
   if (!repo)
@@ -304,4 +305,22 @@ Repository *load_repository() {
   }
 
   return repo;
+}
+
+void load_branch_heads(Repository *repo) {
+    Branch *branch = repo->branches;
+    while (branch) {
+        char ref_path[256];
+        snprintf(ref_path, sizeof(ref_path), ".babygit/refs/heads/%s", branch->name);
+        FILE *ref = fopen(ref_path, "r");
+        if (ref) {
+            char hash[41];
+            if (fgets(hash, sizeof(hash), ref)) {
+                hash[strcspn(hash, "\n")] = 0;
+                branch->head = load_commit(hash);
+            }
+            fclose(ref);
+        }
+        branch = branch->next;
+    }
 }
